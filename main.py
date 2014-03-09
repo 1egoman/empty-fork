@@ -2,8 +2,12 @@
 import pygame
 from pygame.locals import *
 
+# os
+import os
+
 # my files
 import world
+import main_menu
 
 
 class app(object):
@@ -14,23 +18,40 @@ class app(object):
 
     # init vars
     self.w = 800
-    self.h = 600
+    self.h = 500
     self.running = True
+
 
     # init pygame
     pygame.init()
+
 
     # create screen
     self.s = pygame.display.set_mode((self.w, self.h), RESIZABLE)
     pygame.display.set_caption("The Sandbox-Sandbox DEV0.1")
 
+
+    # go to menu
+    self.s, w = main_menu.go(self.s)
+    if not w: return
+
+
     # create clock
     self.clock = pygame.time.Clock()
 
-    # create map, center it
+
+    # create map, load world, and center it
     self.wld = world.map(self.s, w=16, h=16)
-    # self.wld.flush_and_randomize_map()
+
+    # load map if possible
+    if os.listdir(os.path.join("saves", w)) != []: 
+      self.wld.load_map(w)
+    else:
+      # create a new map, and save it
+      self.wld.save_map(w, notify=False)
+
     self.wld.center_map((self.w,self.h))
+
 
     # loop
     self.loop()
@@ -71,11 +92,32 @@ class app(object):
           if event.unicode == "a": self.wld.xo += self.wld.TILE_W
 
           # save/load
-          if event.unicode == "q": self.wld.save_map("world")
-          if event.unicode == "e": self.wld.load_map("world")
+          if event.unicode == "q": self.wld.save_map()
+          if event.unicode == "e": self.wld.load_map(self.wld._NAME)
 
           # test notification
-          if event.unicode == "i": self.wld.notify.msg("Test Message!")
+          if event.key == K_ESCAPE:
+
+            print self.wld.clock
+            self.wld.clock.pause()
+
+            # go (back) to menu
+            self.s, w = main_menu.go(self.s)
+            if not w: return
+
+            # load map if possible
+            if os.listdir(os.path.join("saves", w)) != []: 
+              self.wld.load_map(w)
+            else:
+              # create a new map, and save it
+              self.wld.flush_map()
+              self.wld.save_map(w, notify=False)
+
+            self.wld.center_map((self.w,self.h))
+
+            # uppause clock
+            self.wld.clock.unpause()
+
 
           # debug (F1)
           if event.key == 282: 

@@ -69,6 +69,8 @@ class map(object):
     # font
     self._FONT = pygame.font.SysFont(pygame.font.get_default_font(), 18)
 
+    self._NAME = None
+
     # set up events
     self._events = []
 
@@ -90,12 +92,6 @@ class map(object):
 
     # create map
     self.flush_map()
-
-
-  def __del__(self):
-    # stop clock
-    self.clock.stop()
-    pass
 
 
   # container for resources
@@ -384,8 +380,13 @@ class map(object):
 
 
   # save the map to file
-  def save_map(self, n="world", notify=True):
+  def save_map(self, n=None, notify=True):
     
+    if n:
+      self._NAME = n
+    else:
+      n = self._NAME
+
     # create world folder if needed
     p = os.path.join("saves", n)
     if not os.path.exists(p):
@@ -419,15 +420,17 @@ class map(object):
 
 
   def load_map(self, n="world"):
+    self._NAME = n
+
     self.load_real_map(n)
 
     # give program time to process
-    time.sleep(0.1)
+    self.render() # time.sleep(0.1)
 
     self.save_map(n, notify=False)
 
     # give program time to process
-    time.sleep(0.1)
+    self.render() # time.sleep(0.1)
 
     self.load_real_map(n)
 
