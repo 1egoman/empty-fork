@@ -11,10 +11,19 @@ from gameobjects.gametime import GameClock
 # math
 from math import *
 
-# mine
+# json
+import json
+
+# time
+import time
+
+# from folder
 from tiles import *
 from pygame_helpers import *
-import timer
+import cfg_parser
+import notifier as notify
+
+
 
 class map(object):
 
@@ -38,8 +47,15 @@ class map(object):
     self._last_sun_pos = 0
     self._sun_event = False
 
+    self.BG_COLOR = (180, 180, 180)
+
     self._mx = 0
     self._my = 0
+
+    self._stile = None
+
+    self.FPS = 0
+    self._DIAGNOSTIC = False
 
     # create gametime clock
     self.clock = GameClock()
@@ -50,9 +66,14 @@ class map(object):
     self.day_length = 600.0 # 10 minutes
     self._day_phases = 100.0 # how many times to change the light
 
+    # font
+    self._FONT = pygame.font.SysFont(pygame.font.get_default_font(), 18)
+
     # set up events
     self._events = []
 
+    # set up notifications
+    self.notify = notify.notifier(self, self.s)
 
 
 
@@ -133,17 +154,32 @@ class map(object):
     self.src.selector = pygame.image.load( os.path.join("src", "selector.png") ).convert_alpha()
 
     # tools
-    shovel = pygame.image.load( os.path.join("src", "shovel.png") ).convert_alpha()
+    shovel = pygame.image.load( os.path.join("src", "tools", "shovel.png") ).convert_alpha()
     self.src.shovel = pygame.transform.smoothscale( shovel, (32, 32) )
     self.src.shovel_action = pygame.transform.rotate(self.src.shovel, 20)
     
     # mining images
     self.src.mine = []
-    self.src.mine.append( pygame.image.load( os.path.join("src", "mine4.png") ).convert_alpha() )
-    self.src.mine.append( pygame.image.load( os.path.join("src", "mine3.png") ).convert_alpha() )
-    self.src.mine.append( pygame.image.load( os.path.join("src", "mine2.png") ).convert_alpha() )
-    self.src.mine.append( pygame.image.load( os.path.join("src", "mine1.png") ).convert_alpha() )
-    self.src.mine.append( pygame.image.load( os.path.join("src", "mine0.png") ).convert_alpha() )
+    self.src.mine.append( pygame.image.load( os.path.join("src", "mine_block", "mine4.png") ).convert_alpha() )
+    self.src.mine.append( pygame.image.load( os.path.join("src", "mine_block", "mine3.png") ).convert_alpha() )
+    self.src.mine.append( pygame.image.load( os.path.join("src", "mine_block", "mine2.png") ).convert_alpha() )
+    self.src.mine.append( pygame.image.load( os.path.join("src", "mine_block", "mine1.png") ).convert_alpha() )
+    self.src.mine.append( pygame.image.load( os.path.join("src", "mine_block", "mine0.png") ).convert_alpha() )
+
+    # tiles
+    self.src.sand =  pygame.transform.smoothscale(pygame.image.load( os.path.join("src", "block", "sand.png") ).convert_alpha(), (self.TILE_W, self._TILE_H) )
+    self.src.dirt =  pygame.transform.smoothscale(pygame.image.load( os.path.join("src", "block", "dirt.png") ).convert_alpha(), (self.TILE_W, self._TILE_H) )
+
+    # log boundries
+    self.src.rlog =  pygame.transform.smoothscale(pygame.image.load( os.path.join("src", "rlog.png") ).convert_alpha(), (self.TILE_W, self._TILE_H+self.TILE_H/2) )
+    self.src.llog = pygame.transform.flip(self.src.rlog, 1, 0)
+
+    # notifications
+    self.src.info_msg =  pygame.transform.smoothscale(pygame.image.load( os.path.join("src", "notify", "info.png") ).convert_alpha(), (300, 150) )
+
+
+
+
 
 
   def flush_map(self):
@@ -222,8 +258,6 @@ class map(object):
         self.tiles[x][y].update()
 
 
-
-
   # delete events that are tagged with description d
   def flush_events(self, d=""):
     for c,e in enumerate(self._events):
@@ -239,6 +273,7 @@ class map(object):
     self.sun_pos += t
     self._sun_event = False
 
+
   def clear_map(self, color=None):
     # sets all tiles to color, and resets selection
 
@@ -249,6 +284,10 @@ class map(object):
         # create new tile, set variables
         if color: self.tiles[x][y].color = color
         self.tiles[x][y].selected = False
+
+
+
+
 
 
   # convert tile coords to screen coords
@@ -339,14 +378,99 @@ class map(object):
       return tile_block[index1].x, tile_block[index1].y
 
 
-  def in_map(self, x, y):
-    # see if the tile (x,y) is on the map
 
-    try:
-      _ = self.tiles[x][y]
-      return True
-    except IndexError:
-      return False
+
+
+
+
+  # save the map to file
+  def save_map(self, n="world", notify=True):
+    
+    # create world folder if needed
+    p = os.path.join("saves", n)
+    if not os.path.exists(p):
+      os.mkdir(p)
+
+    # construct structure to save
+    t = self.tiles[:]
+    data_struct = {
+      "map": t,
+      "width": self.w,
+      "height": self.h,
+      "sun_pos": self.sun_pos,
+      "diagnostics": self._DIAGNOSTIC
+    }
+
+    # parse data
+    ps = cfg_parser.parse(data_struct)
+
+    # save it
+    # with open(os.path.join(p, "main.pkl"), "w") as f:
+    with open(os.path.join(p, "main.pkl"), "w") as f:
+      f.write(ps)
+
+
+    if notify:
+      self.notify.msg("Saved", "Map '"+n+"' has been saved.")
+      print "saved"
+
+
+
+
+
+  def load_map(self, n="world"):
+    self.load_real_map(n)
+
+    # give program time to process
+    time.sleep(0.1)
+
+    self.save_map(n, notify=False)
+
+    # give program time to process
+    time.sleep(0.1)
+
+    self.load_real_map(n)
+
+    self.notify.msg("Load", "Map '"+n+"' has been loaded.")
+
+  # save the map to file
+  def load_real_map(self, n):
+    
+    p = os.path.join("saves", n)
+    if not os.path.exists(p): return
+
+    with open(os.path.join(p, "main.pkl"), "r") as f:
+      d = f.read()
+
+
+    # load map
+    data_struct = cfg_parser.load(self, self.s, d)
+    self.tiles = data_struct['map']
+
+
+
+    # create blocks
+    for x in xrange(0, self.w):
+      self.tiles.append([])
+      for y in xrange(0, self.h):
+
+        # create block
+        self.tiles[x][y].BLOCK = self.create_block(x, y)
+
+        # lastly, update the tile
+        self.tiles[x][y].update()
+
+
+
+    self.w = data_struct['width']
+    self.h = data_struct['height']
+    self.sun_pos = data_struct['sun_pos']
+    self._DIAGNOSTIC = data_struct['diagnostics']
+
+
+    print "loaded"
+
+
 
 
   def create_block(self, x, y):
@@ -376,6 +500,9 @@ class map(object):
     return block
 
 
+
+
+
   def render(self):
 
     # update game clock
@@ -392,6 +519,46 @@ class map(object):
           self._events.remove(e)
 
 
+
+    # render the log border
+    aw = self.w/2*self.TILE_W
+    ah = self.h/2*self.TILE_H
+
+    # logs on right
+    for x in xrange(0, self.w):
+
+      # draw log
+      self.s.blit(self.src.rlog, (\
+        self.xo+aw+(x*self.TILE_W/2),
+        self.yo-ah-self.TILE_H/2+(x*self.TILE_H/2)
+        ))
+
+    # fixes a display bug (covers up edge of log so it doesnt show)
+    if self.tiles[self.w-1][self.w-1].h == 1:
+      fx = self.xo+aw+(self.w*self.TILE_W/2)+5
+      fy = self.yo-ah-self.TILE_H/2+(x*self.TILE_H/2)+self.TILE_H-1
+      pygame.draw.polygon(self.s, self.BG_COLOR, [ [fx, fy],\
+      [fx, fy+self.TILE_H/2+5], [fx-64, fy+32-1] ])
+
+
+    # logs on left
+    for y in xrange(0, self.h):
+
+      # draw log
+      self.s.blit(self.src.llog, (\
+        self.xo+aw-self.TILE_W-(y*self.TILE_W/2),
+        self.yo-ah-self.TILE_H/2+(y*self.TILE_H/2)
+        ))
+
+    # fixes a display bug (covers up edge of log so it doesnt show)
+    if self.tiles[0][0].h == 1:
+      fx = self.xo+aw-self.TILE_W/2-(y*self.TILE_W/2)-5
+      fy = self.yo-ah+self.TILE_H*2+(y*self.TILE_H/2)-self.TILE_H-1
+      pygame.draw.polygon(self.s, self.BG_COLOR, [ [fx, fy],\
+      [fx, fy-self.TILE_H/2], [fx+64, fy] ])
+
+
+
     # render all tiles
     for x in xrange(self.w-1, -1, -1):
       for y in xrange(0, self.h):
@@ -404,9 +571,22 @@ class map(object):
           t.render()
 
 
+
+    # render any notifications
+    self.notify.render()
+
+
+
     # render current tool
     if self.tool:
       self.s.blit(self.tools[self.tool][self.tool_image], (self._mx, self._my))
+
+
+
+    # render diagnostic info
+    if self._DIAGNOSTIC: self.render_diagnostic()
+
+
 
     # do daylight stuff
     # update the time
@@ -414,6 +594,17 @@ class map(object):
       # schedule an update for later
       self.schedule_time(self.time+self.day_length/self._day_phases, self.increment_time, [1/self._day_phases], "time_shift")
       self._sun_event = True
+
+
+  def render_diagnostic(self):
+    # FPS
+    s = "FPS: "+str(round(self.FPS))
+    rndr = self._FONT.render(s, True, (255,255,255))
+    self.s.blit(rndr, (10, 10))
+
+
+
+
 
 
   def send_motion(self, event):
@@ -431,10 +622,11 @@ class map(object):
     if y < 0: y = 0
 
     # color that tile's block
-    # for b in self.tiles[x][y].BLOCK:
-    #   b.color = (255, 0, 0)
+    # if self._DIAGNOSTIC:
+    #   for b in self.tiles[x][y].BLOCK:
+    #     b.color = (255, 0, 0)
 
-    # self.tiles[x][y].color = (0, 255, 0)
+    #   self.tiles[x][y].color = (0, 255, 0)
 
     self.tiles[x][y].selected = True
 

@@ -35,10 +35,9 @@ class tile(object):
     self._mine_state = None
 
     self._SHADE = 1
+    self._flat = False
 
     self.selected = False
-
-    # self.font = pygame.font.SysFont("monospace", 12)
 
   # calculates the amout to shade a tile
   def calculate_shade(self, s):
@@ -167,10 +166,18 @@ class tile(object):
     self.centery = self.pts[0][1]+self.TILE_H/2-self.ay/2
 
 
+    # check shape
+    if (not self.ay and not self.ax) and (not self.by and not self.bx) and \
+    (not self.cy and not self.cx) and (not self.dy and not self.dx):
+      self._flat = True
+    else:
+      self._flat = False
+
 
     # draw tile
     c = (self.color[0]*self._SHADE, self.color[1]*self._SHADE, self.color[2]*self._SHADE)
     pygame.draw.polygon(self.s, c, self.pts)
+    self.draw_on_block()
 
 
 
@@ -190,13 +197,15 @@ class tile(object):
 
     # debug
     # if self.x == 2 and self.y == 2: 
-    self.s.set_at((self.centerx, self.centery), (0, 0, 255))
+    # self.s.set_at((self.centerx, self.centery), (0, 0, 255))
 
 
     # label tile
     # r = self.font.render( str(self.x)+","+str(self.y), True, (0,0,0) )
     # self.s.blit(r, (sx+30,sy+10+h))
 
+
+  def draw_on_block(self): pass
 
 
 
@@ -205,11 +214,23 @@ def generate_random_tile_height():
   return a
 
 
-
+# basic sand tile
 class sand(tile):
 
   def __init__(self, *args):
     super(sand, self).__init__(*args)
 
     # set sand color
-    self.color = (233, 201, 175)
+    self.color = (217, 189, 167)
+    self.h = 1
+
+
+  def render(self, *args):
+    super(sand, self).render(*args)
+    
+  def draw_on_block(self):
+    if self._flat:
+      if self.h > self.parent.MAX_NEGITIVE_DIG: 
+        self.s.blit(self.parent.src.sand, (self.pts[3][0], self.pts[0][1]))
+      else:
+        self.s.blit(self.parent.src.dirt, (self.pts[3][0], self.pts[0][1]))

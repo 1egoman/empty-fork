@@ -22,6 +22,7 @@ class app(object):
 
     # create screen
     self.s = pygame.display.set_mode((self.w, self.h), RESIZABLE)
+    pygame.display.set_caption("The Sandbox-Sandbox DEV0.1")
 
     # create clock
     self.clock = pygame.time.Clock()
@@ -44,6 +45,7 @@ class app(object):
       
       # tick clock
       self.clock.tick()
+      self.wld.FPS = self.clock.get_fps()
 
       # events
       for event in pygame.event.get():
@@ -63,14 +65,22 @@ class app(object):
 
 
         elif event.type == KEYDOWN:
-          if event.unicode == "w": self.wld.yo += 50
-          if event.unicode == "s": self.wld.yo -= 50
-          if event.unicode == "d": self.wld.xo += 50
-          if event.unicode == "a": self.wld.xo -= 50
+          if event.unicode == "w": self.wld.yo += self.wld.TILE_H
+          if event.unicode == "s": self.wld.yo -= self.wld.TILE_H
+          if event.unicode == "d": self.wld.xo -= self.wld.TILE_W
+          if event.unicode == "a": self.wld.xo += self.wld.TILE_W
 
-          # adjust sun position
-          if event.unicode == "q": self.wld.sun_pos += 0.1
-          if event.unicode == "e": self.wld.sun_pos -= 0.1
+          # save/load
+          if event.unicode == "q": self.wld.save_map("world")
+          if event.unicode == "e": self.wld.load_map("world")
+
+          # test notification
+          if event.unicode == "i": self.wld.notify.msg("Test Message!")
+
+          # debug (F1)
+          if event.key == 282: 
+            self.wld._DIAGNOSTIC = not self.wld._DIAGNOSTIC
+            if self.wld._DIAGNOSTIC: self.wld.notify.msg("Diagnostics", "Diagnostics mode has been enabled.")
 
 
         elif event.type == MOUSEMOTION:
@@ -88,7 +98,7 @@ class app(object):
 
 
       # draw background
-      self.s.fill(self.BG_COLOR)
+      self.s.fill(self.wld.BG_COLOR)
 
       # render world
       self.wld.render()
