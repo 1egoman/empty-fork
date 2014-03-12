@@ -1,4 +1,4 @@
-#The Sandbox-Sandbox: A sandbox game inside a sandbox#
+#The Sandbox#
 **Anyone who wants to help can let me know. I could use it!**
 
 ![Title Image](title_image.png?raw=true)
