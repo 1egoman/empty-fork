@@ -72,13 +72,13 @@ class GameClock(object):
         
         """Pauses the Game Clock."""
         
-        self.pause = True
+        self.paused = True
         
     def unpause(self):
         
         """Un-pauses the Game Clock."""
         
-        self.pause = False
+        self.paused = False
         
         
     def get_real_time(self):
