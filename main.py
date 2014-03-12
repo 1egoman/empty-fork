@@ -8,6 +8,8 @@ import os
 # my files
 import world
 import main_menu
+import entitys
+import inventory as i
 
 
 class app(object):
@@ -35,13 +37,17 @@ class app(object):
     self.s, w = main_menu.go(self.s)
     if not w: return
 
+    # create map, load world, and center it
+    self.wld = world.map(self.s, w=16, h=16)
+
+    # fill
+    self.s.fill((180,180,180))
+    rndr = self.wld._FONT.render("Loading...", True, (255,255,255))
+    self.s.blit(rndr, ( (self.w-rndr.get_width())/2, 200))
 
     # create clock
     self.clock = pygame.time.Clock()
 
-
-    # create map, load world, and center it
-    self.wld = world.map(self.s, w=16, h=16)
 
     # load map if possible
     if os.listdir(os.path.join("saves", w)) != []: 
@@ -51,6 +57,9 @@ class app(object):
       self.wld.save_map(w, notify=False)
 
     self.wld.center_map((self.w,self.h))
+
+    # spawn a sandwich
+    # self.wld.spawn(0, 0, entitys.sandwich)
 
 
     # loop
@@ -86,19 +95,26 @@ class app(object):
 
 
         elif event.type == KEYDOWN:
-          if event.unicode == "w": self.wld.yo += self.wld.TILE_H
-          if event.unicode == "s": self.wld.yo -= self.wld.TILE_H
-          if event.unicode == "d": self.wld.xo -= self.wld.TILE_W
-          if event.unicode == "a": self.wld.xo += self.wld.TILE_W
+
+          # "nudge keys"
+          if event.unicode == "i": self.wld.selected_tile = ( self.wld.selected_tile[0], self.wld.selected_tile[1]-1 )
+          if event.unicode == "l": self.wld.selected_tile = ( self.wld.selected_tile[0], self.wld.selected_tile[1]+1 )
+          if event.unicode == "k": self.wld.selected_tile = ( self.wld.selected_tile[0]-1, self.wld.selected_tile[1] )
+          if event.unicode == "o": self.wld.selected_tile = ( self.wld.selected_tile[0]+1, self.wld.selected_tile[1] )
 
           # save/load
           if event.unicode == "q": self.wld.save_map()
           if event.unicode == "e": self.wld.load_map(self.wld._NAME)
 
-          # test notification
-          if event.key == K_ESCAPE:
+          # test
+          if event.unicode == "t": self.wld.inventory.add_item(i.item(1,64))
 
-            print self.wld.clock
+          # back to main menu
+          if event.key == K_ESCAPE:
+            # save map
+            self.wld.save_map()
+
+            # pause clock
             self.wld.clock.pause()
 
             # go (back) to menu
@@ -127,7 +143,7 @@ class app(object):
 
         elif event.type == MOUSEMOTION:
           # send mouse motion
-          self.wld.send_motion( event )
+          self.wld.send_motion( *event.pos )
 
         elif event.type == MOUSEBUTTONDOWN:
           # send mouse motion

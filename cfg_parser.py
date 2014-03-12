@@ -1,5 +1,5 @@
-import cPickle as pickle
-# import pickle
+# import cPickle as pickle
+import pickle
 import tiles
 
 
@@ -31,9 +31,11 @@ def load(world, s, data):
   dmap = []
 
   for x in xrange(data['width']-1, -1, -1):
+  # for x in xrange(0, data['width']):
     dmap.append([])
 
     for y in xrange(0, data['height']):
+    # for y in xrange(data['height']-1, -1, -1):
       dmap[-1].append( data['map'][x][y].unpack(world, s) )
 
 

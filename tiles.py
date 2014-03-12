@@ -190,7 +190,8 @@ class tile(object):
       self.s.blit(self.parent.src.mine[self._mine_state], (self.pts[3][0], self.pts[0][1]))
 
     # draw selection
-    if self.selected:
+    # if self.selected:
+    if self.parent.selected_tile == (self.x, self.y):
       self.s.blit(self.parent.src.selector, (self.pts[3][0], self.pts[0][1]))
 
 
@@ -201,8 +202,9 @@ class tile(object):
 
 
     # label tile
-    # r = self.font.render( str(self.x)+","+str(self.y), True, (0,0,0) )
-    # self.s.blit(r, (sx+30,sy+10+h))
+    if self.parent._DIAGNOSTIC:
+      r = self.parent._FONT.render( str(self.x)+","+str(self.y), True, (0,0,0) )
+      self.s.blit(r, (sx+30,sy+10+h))
 
 
   def draw_on_block(self): pass

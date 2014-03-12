@@ -19,10 +19,10 @@ import time
 
 # from folder
 from tiles import *
-from pygame_helpers import *
 import cfg_parser
 import notifier as notify
-
+import entitys
+import inventory
 
 
 class map(object):
@@ -57,8 +57,10 @@ class map(object):
     self.FPS = 0
     self._DIAGNOSTIC = False
 
+    self.selected_tile = None
+
     # create gametime clock
-    self.clock = GameClock()
+    self.clock = GameClock(100)
     self.clock.start()
     self.time = 0
 
@@ -69,7 +71,11 @@ class map(object):
     # font
     self._FONT = pygame.font.SysFont(pygame.font.get_default_font(), 18)
 
+    # world's name
     self._NAME = None
+
+    # entity stuff
+    self._entitys = []
 
     # set up events
     self._events = []
@@ -78,10 +84,22 @@ class map(object):
     self.notify = notify.notifier(self, self.s)
 
 
+    # create inventory
+    self.inventory = inventory.inv(self.s, self)
+
 
 
     # load images
     self.load_src()
+
+
+
+    # officially create all items
+    inventory.create_item_dict(self)
+
+    # add inventory items
+    # self.inventory.add_item( inventory.item(inventory.items["sand"], 16) )
+
 
 
     # tools
@@ -92,6 +110,9 @@ class map(object):
 
     # create map
     self.flush_map()
+
+    # do player screen movement
+    self.do_movement()
 
 
   # container for resources
@@ -151,7 +172,7 @@ class map(object):
 
     # tools
     shovel = pygame.image.load( os.path.join("src", "tools", "shovel.png") ).convert_alpha()
-    self.src.shovel = pygame.transform.smoothscale( shovel, (32, 32) )
+    self.src.shovel = pygame.transform.smoothscale( shovel, (96, 96) )
     self.src.shovel_action = pygame.transform.rotate(self.src.shovel, 20)
     
     # mining images
@@ -166,12 +187,19 @@ class map(object):
     self.src.sand =  pygame.transform.smoothscale(pygame.image.load( os.path.join("src", "block", "sand.png") ).convert_alpha(), (self.TILE_W, self._TILE_H) )
     self.src.dirt =  pygame.transform.smoothscale(pygame.image.load( os.path.join("src", "block", "dirt.png") ).convert_alpha(), (self.TILE_W, self._TILE_H) )
 
+    # items
+    self.src.item_sand =  pygame.transform.smoothscale(pygame.image.load( os.path.join("src", "item", "sand.png") ).convert_alpha(), (self.inventory._INV_CELL_W, self.inventory._INV_CELL_W) )
+
     # log boundries
     self.src.rlog =  pygame.transform.smoothscale(pygame.image.load( os.path.join("src", "rlog.png") ).convert_alpha(), (self.TILE_W, self._TILE_H+self.TILE_H/2) )
     self.src.llog = pygame.transform.flip(self.src.rlog, 1, 0)
 
     # notifications
     self.src.info_msg =  pygame.transform.smoothscale(pygame.image.load( os.path.join("src", "notify", "info.png") ).convert_alpha(), (300, 150) )
+
+    # entitys
+    self.src.entity_guy =  pygame.image.load( os.path.join("src", "entitys", "guy.png") ).convert_alpha()
+    self.src.sandwich =  pygame.image.load( os.path.join("src", "entitys", "sandwich.png") ).convert_alpha()
 
 
 
@@ -294,14 +322,17 @@ class map(object):
 
 
   # convert screen coords to 2d tile coords
-  def to_2d_tile(self, x, y):
+  def to_2d_tile(self, x, y, f=False):
     x, y = (x-self.xo)*1.0, (y-self.yo)*1.0
 
     # now do math
     tx = (y - x/2)/self.TILE_H
     ty = (y + x/2)/self.TILE_H
 
-    return int( floor(-tx) ), int( floor(ty) )
+    if f:
+      return -tx, ty
+    else:
+      return int( floor(-tx) ), int( floor(ty) )
 
 
   # version of to_2d_tile that is more precise and handles 3d
@@ -399,7 +430,8 @@ class map(object):
       "width": self.w,
       "height": self.h,
       "sun_pos": self.sun_pos,
-      "diagnostics": self._DIAGNOSTIC
+      "diagnostics": self._DIAGNOSTIC,
+      "inventory": self.inventory.slots
     }
 
     # parse data
@@ -470,6 +502,11 @@ class map(object):
     self.sun_pos = data_struct['sun_pos']
     self._DIAGNOSTIC = data_struct['diagnostics']
 
+    if data_struct.has_key("inventory"):
+      self.inventory.slots = data_struct['inventory']
+    else:
+      self.inventory.slots = []
+
 
     print "loaded"
 
@@ -507,6 +544,12 @@ class map(object):
 
 
   def render(self):
+
+    # make sure that the selected tile exists
+    if self.selected_tile and self.selected_tile[0] < 0: self.selected_tile = ( 0, self.selected_tile[1] )
+    if self.selected_tile and self.selected_tile[0] > self.w-1: self.selected_tile = ( self.w-1, self.selected_tile[1]  )
+    if self.selected_tile and self.selected_tile[1] < 0: self.selected_tile = ( self.selected_tile[0], 0 )
+    if self.selected_tile and self.selected_tile[1] > self.h-1: self.wselected_tile = ( self.selected_tile[0], self.h-1 )
 
     # update game clock
     for g in self.clock.update():
@@ -562,6 +605,9 @@ class map(object):
 
 
 
+
+
+
     # render all tiles
     for x in xrange(self.w-1, -1, -1):
       for y in xrange(0, self.h):
@@ -575,8 +621,20 @@ class map(object):
 
 
 
+
+    # render entitys
+    for e in self._entitys:
+      e.update()
+      e.render()
+
+
+
     # render any notifications
     self.notify.render()
+
+
+    # render inventory
+    self.inventory.render()
 
 
 
@@ -599,6 +657,7 @@ class map(object):
       self._sun_event = True
 
 
+
   def render_diagnostic(self):
     # FPS
     s = "FPS: "+str(round(self.FPS))
@@ -607,16 +666,29 @@ class map(object):
 
 
 
+  def do_movement(self):
+    keys = pygame.key.get_pressed()
+    speed = 5
+    if keys[K_w]: self.yo += speed
+    if keys[K_s]: self.yo -= speed
+    if keys[K_d]: self.xo -= speed
+    if keys[K_a]: self.xo += speed
+
+    # do mouse motion
+    # self.send_motion(*pygame.mouse.get_pos())
+
+    # schedule next iteration
+    self.schedule_time(self.time+0.01, self.do_movement, [], "move_screen_for_player")
 
 
 
-  def send_motion(self, event):
+  def send_motion(self, x, y):
 
     # clear the map
     self.clear_map()
 
     # get mx and my
-    self._mx, self._my = event.pos
+    self._mx, self._my = x, y
 
     # get 3d click
     x, y = self.to_3d_tile(self._mx, self._my)
@@ -632,6 +704,7 @@ class map(object):
     #   self.tiles[x][y].color = (0, 255, 0)
 
     self.tiles[x][y].selected = True
+    self.selected_tile = x, y
 
 
   # function called to update a tile's mining status
@@ -657,6 +730,9 @@ class map(object):
       if self.tool: self.tool_image = 0
       tile._mine_state = None
       tile.h -= 1
+
+      # add into inventory
+      self.inventory.add_item( inventory.item(inventory.items["sand"], 1) )
 
       # update tila and tiles block
       tile.update()
@@ -695,8 +771,16 @@ class map(object):
     # get mx and my
     mx, my = event.pos
 
+
+    # first, check to see if the click occered within the inventory
+    if mx > self.inventory.x and mx < self.inventory.x+self.inventory.w and \
+    my > self.inventory.y and my < self.inventory.y+self.inventory.h:
+      self.inventory.click(event)
+      return
+
+
     # get 3d click
-    x, y = self.to_3d_tile(mx, my)
+    x, y = self.selected_tile#self.to_3d_tile(mx, my)
 
     # round off
     if x < 0: x = 0
@@ -704,8 +788,17 @@ class map(object):
 
 
     if a == "down" and event.button == 1:
-      # mine that tile
+
+      # check entitys
+      for e in self._entitys:
+        Tx, Ty = self.to_2d_tile(mx, my)
+        if Tx >= e.x and Tx <= e.x+e.w and Ty >= e.y and Ty <= e.y+e.h:
+          if e.click(): return
+
+
+      # otherwise, mine that tile
       if self.tiles[x][y].h <= self.MAX_NEGITIVE_DIG: return
+      if not self.inventory.room_in_inventory(): return
       self.mine_tile(x, y)
 
     elif a == "down" and event.button == 3:
@@ -713,8 +806,13 @@ class map(object):
       # error checking
       if self.tiles[x][y].h > (self.BLOCK_H+self.BLOCK_H)/2: return
 
-      # update tile
-      self.tiles[x][y].h += 1
+
+      # if we have the resources...
+      if type( self.inventory.item_in_inventory( inventory.item(inventory.items["sand"]) )) == int:
+        # update tile (increase height)
+        self.tiles[x][y].h += 1
+        self.inventory.remove_item( inventory.item(inventory.items["sand"], 1) )
+
       # send an update to tiles block
       self.tiles[x][y].update()
       self.tiles[x][y].update_block()
@@ -730,3 +828,11 @@ class map(object):
   def center_map(self, (w, h)):
     self.xo = w/2-(self.w*self.TILE_W/2)
     self.yo = h/2
+
+
+
+
+  # spawn entitys
+  def spawn(self, x=0, y=0, t=entitys.mob):
+    e = t(self.s, self, x, y)
+    self._entitys.append(e)

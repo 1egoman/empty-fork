@@ -36,9 +36,11 @@ class notifier(object):
     rndr1 = self._FONT_HEAD.render(self.lst[0], True, (255,255,255))
     self.s.blit( rndr1, (dx+self._MARGINS, self._MARGINS) )
 
-    # body message
-    rndr2 = self._FONT.render(self.lst[1], True, (255,255,255))
-    self.s.blit( rndr2, (dx+self._MARGINS, self._MARGINS*1.25+rndr1.get_height()) )
+    # body message (split on \n to form lines)
+    s = self.lst[1].split("\n")
+    for c,d in enumerate(s):
+      rndr2 = self._FONT.render(d, True, (255,255,255))
+      self.s.blit( rndr2, (dx+self._MARGINS, self._MARGINS*1.25+rndr1.get_height()+c*rndr2.get_height()) )
 
 
   # remove notification # d

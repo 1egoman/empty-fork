@@ -6,28 +6,30 @@ import shutil
 
 
 # MAIN MENU
-def go(s):
+def go(s, a=True):
 
   logo_h = 200
 
   # load images
   logo = pygame.image.load( os.path.join("src", "menu", "logo.png") ).convert_alpha()
 
-  button = pygame.image.load( os.path.join("src", "menu", "button.png") ).convert_alpha()
-
   play_button = pygame.image.load( os.path.join("src", "menu", "playbutton.png") ).convert_alpha()
   play_button_down = pygame.image.load( os.path.join("src", "menu", "playbuttondown.png") ).convert_alpha()
-  play_down = False
+
+  quit_button = pygame.image.load( os.path.join("src", "menu", "quitbutton.png") ).convert_alpha()
+  quit_button_down = pygame.image.load( os.path.join("src", "menu", "quitbuttondown.png") ).convert_alpha()
+  play_down = quit_down = False
 
   loop = 1
+  f = 1000
   while loop:
+    f += 1
+
 
     cx = (s.get_width() - play_button.get_width())/2
 
     # events
     for event in pygame.event.get():
-
-
 
       if event.type == QUIT:
         # quit program
@@ -52,6 +54,12 @@ def go(s):
           play_down = False
 
 
+          if f > 50 and mx >= cx and mx <= cx+play_button.get_width() and my >= logo_h+80 and my <= logo_h+play_button.get_height()+80+quit_button.get_height():
+            quit_down = True
+          else:
+            quit_down = False
+
+
 
 
       elif event.type == MOUSEBUTTONUP:
@@ -59,15 +67,23 @@ def go(s):
 
         # play button
         if mx >= cx and mx <= cx+play_button.get_width() and my >= logo_h+64 and my <= logo_h+play_button.get_height()+64:
-          a = load_new_world(s)
-          print a
-          if a: return a
+          aa = load_new_world(s)
+          if aa: return aa
+          f = 0
+
         
-        play_down = False
+        # quit button
+        if f > 50 and mx >= cx and mx <= cx+play_button.get_width() and my >= logo_h+80 and my <= logo_h+play_button.get_height()+80+quit_button.get_height():
+          s.blit(quit_button, (cx, logo_h+play_button.get_height()+80 ))
+          pygame.display.flip()
+          return s, None
+
+        play_down = quit_down = False
 
 
     # fill screen
     s.fill((180,180,180))
+    if s.get_height() > 750: pygame.draw.rect(s, (120, 120, 120), (0, s.get_height()-100, s.get_width(), s.get_height()-100))
 
     # draw buttons and logo
     s.blit(logo, (cx, 16 ))
@@ -77,7 +93,11 @@ def go(s):
     else:
       s.blit(play_button, (cx, logo_h+64))
 
-    s.blit(button, (cx, logo_h+play_button.get_height()+80 ))
+
+    if quit_down:
+      s.blit(quit_button_down, (cx, logo_h+play_button.get_height()+80 ))
+    else:
+      s.blit(quit_button, (cx, logo_h+play_button.get_height()+80 ))
 
     # flip
     pygame.display.flip()
@@ -236,6 +256,7 @@ def load_new_world(s):
 
     # fill screen
     s.fill((180,180,180))
+    if s.get_height() > 750: pygame.draw.rect(s, (120, 120, 120), (0, s.get_height()-100, s.get_width(), s.get_height()-100))
 
 
     # draw selectbox
@@ -384,6 +405,7 @@ def new_world(s):
 
     # fill screen
     s.fill((180,180,180))
+    if s.get_height() > 750: pygame.draw.rect(s, (120, 120, 120), (0, s.get_height()-100, s.get_width(), s.get_height()-100))
 
     rndr = font.render("World Name: ", 1, (255,255,255))
     s.blit(rndr, (cx, 48))
