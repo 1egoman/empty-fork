@@ -59,7 +59,7 @@ class app(object):
     self.wld.center_map((self.w,self.h))
 
     # spawn a sandwich
-    # self.wld.spawn(0, 0, entitys.sandwich)
+    # self.wld.spawn(0, 0, entitys.fire)
 
 
     # loop
@@ -107,7 +107,9 @@ class app(object):
           if event.unicode == "e": self.wld.load_map(self.wld._NAME)
 
           # test
-          if event.unicode == "t": self.wld.inventory.add_item(i.item(1,64))
+          if event.unicode == "t": 
+            self.wld.inventory.add_item(i.item(21,1))
+            # self.wld.tiles[0][0].tiles[-1] = 10
 
           # back to main menu
           if event.key == K_ESCAPE:

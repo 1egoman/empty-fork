@@ -1,16 +1,59 @@
 import pygame
 from pygame.locals import *
 
+import entitys
 
 # item dictionarys
 items = {}
 items_img = {}
+items_args = {}
 
 
 def create_item_dict(parent):
+  # item width + height
+  iw = 64
+
   # add items
   items["sand"] = 1
-  items_img["sand"] = parent.src.item_sand
+  items_img["sand"] = parent.src.sand
+  items_args["sand"] = {
+    "shape": "block", 
+    "floats": False,
+    "color": (217, 189, 167), 
+    "item_img": pygame.transform.smoothscale(parent.src.item_sand, (iw,iw))
+  }
+
+
+
+  items["bubbleglass"] = 10
+  items_img["bubbleglass"] = parent.src.bubbleglass
+  items_args["bubbleglass"] = {
+    "shape": "block", 
+    "floats": True,
+    "color": (100, 100, 100), 
+    "item_img": pygame.transform.smoothscale(parent.src.bubbleglass, (iw,iw))
+  }
+
+
+  # just places an entity
+  items["sandwich"] = 20
+  items_img["sandwich"] = pygame.transform.smoothscale(parent.src.sandwich, (iw,iw))
+  items_args["sandwich"] = {"shape": "flat", "place_entity": entitys.sandwich, "remove_on_place_entity": True}
+
+  # just places an entity
+  items["torch"] = 21
+  items_img["torch"] = pygame.transform.smoothscale(parent.src.torch, (iw,iw))
+  items_args["torch"] = {"shape": "flat", "place_entity": entitys.fire}
+
+
+
+# "sand" -> 1
+def get_name_from_id(id):
+  for k,v in items.items():
+    if v == id:
+      return k
+
+  return None
 
 
 # main inventory object
@@ -30,6 +73,14 @@ class inv(object):
 
     self._FONT = pygame.font.SysFont(pygame.font.get_default_font(), 18)
 
+
+  # get currently selected inventory item
+  def get_selected_item(self):
+    s_id = self.ACTIVE_CELL[1]*self._INV_W+self.ACTIVE_CELL[0]
+    if s_id <= len(self.slots)-1:
+      return self.slots[s_id]
+    else:
+      return None
 
 
   def render(self):
@@ -75,7 +126,10 @@ class inv(object):
 
 
           # render item picture
-          img = items_img[item_name[0]]
+          if items_args[item_name[0]].has_key("item_img"):
+            img = items_args[item_name[0]]["item_img"]
+          else:
+            img = items_img[item_name[0]]
           self.s.blit(img, (tx+6, ty+6))
 
           # also, render amount
@@ -125,7 +179,7 @@ class inv(object):
       d = self.item_in_inventory(i)
       if type(d) == int:
         # add the item
-        self.slots[d-1] += i
+        self.slots[d] += i
       else:
         # otherwise add it to the inventory
         self.slots.append(i)
@@ -142,8 +196,8 @@ class inv(object):
       d = self.item_in_inventory(i)
       if type(d) == int:
         # remove the item
-        self.slots[d-1] -= i
-        if self.slots[d-1].amt <= 0: self.slots.remove( self.slots[d-1] )
+        self.slots[d] -= i
+        if self.slots[d].amt <= 0: self.slots.remove( self.slots[d] )
       else:
         return False
 

@@ -49,6 +49,8 @@ class map(object):
 
     self.BG_COLOR = (180, 180, 180)
 
+    self.WATER_LEVEL = 5
+
     self._mx = 0
     self._my = 0
 
@@ -96,9 +98,6 @@ class map(object):
 
     # officially create all items
     inventory.create_item_dict(self)
-
-    # add inventory items
-    # self.inventory.add_item( inventory.item(inventory.items["sand"], 16) )
 
 
 
@@ -174,6 +173,7 @@ class map(object):
     shovel = pygame.image.load( os.path.join("src", "tools", "shovel.png") ).convert_alpha()
     self.src.shovel = pygame.transform.smoothscale( shovel, (96, 96) )
     self.src.shovel_action = pygame.transform.rotate(self.src.shovel, 20)
+    self.src.torch =  pygame.image.load( os.path.join("src", "tools", "torch.png") ).convert_alpha()
     
     # mining images
     self.src.mine = []
@@ -186,6 +186,7 @@ class map(object):
     # tiles
     self.src.sand =  pygame.transform.smoothscale(pygame.image.load( os.path.join("src", "block", "sand.png") ).convert_alpha(), (self.TILE_W, self._TILE_H) )
     self.src.dirt =  pygame.transform.smoothscale(pygame.image.load( os.path.join("src", "block", "dirt.png") ).convert_alpha(), (self.TILE_W, self._TILE_H) )
+    self.src.bubbleglass =  pygame.transform.smoothscale(pygame.image.load( os.path.join("src", "block", "bubbleglass.png") ).convert_alpha(), (self.TILE_W, self._TILE_H) )
 
     # items
     self.src.item_sand =  pygame.transform.smoothscale(pygame.image.load( os.path.join("src", "item", "sand.png") ).convert_alpha(), (self.inventory._INV_CELL_W, self.inventory._INV_CELL_W) )
@@ -200,6 +201,7 @@ class map(object):
     # entitys
     self.src.entity_guy =  pygame.image.load( os.path.join("src", "entitys", "guy.png") ).convert_alpha()
     self.src.sandwich =  pygame.image.load( os.path.join("src", "entitys", "sandwich.png") ).convert_alpha()
+    self.src.fire =  pygame.image.load( os.path.join("src", "entitys", "fire.png") ).convert_alpha()
 
 
 
@@ -241,6 +243,12 @@ class map(object):
 
         # lastly, update the tile
         self.tiles[x][y].update()
+
+
+    # flush inventory and
+    # give the player a (starting) sandwich
+    self.inventory.slots = [inventory.item(inventory.items["sandwich"], 1)]
+
 
 
   # flush, but then randomize heights
@@ -606,6 +614,15 @@ class map(object):
 
 
 
+    # render water
+    # wx, wy = self.xo+self.w/2*self.TILE_W, self.yo+self.h/2*self.TILE_H
+    # pygame.draw.polygon(self.s, (51, 102, 153), [
+    #   (wx, wy-self.WATER_LEVEL), 
+    #   (self.xo, self.yo-self.WATER_LEVEL), 
+    #   (wx, wy-self.h*self.TILE_H-self.WATER_LEVEL), 
+    #   (wx+self.w/2*self.TILE_W, self.yo-self.WATER_LEVEL)
+    # ])
+
 
 
     # render all tiles
@@ -732,9 +749,12 @@ class map(object):
       tile.h -= 1
 
       # add into inventory
-      self.inventory.add_item( inventory.item(inventory.items["sand"], 1) )
+      self.inventory.add_item( inventory.item(tile.tiles[-1], 1) )
 
-      # update tila and tiles block
+      # edit tile list
+      tile.tiles = tile.tiles[:-1]
+
+      # update tile and tiles block
       tile.update()
       tile.update_block()
 
@@ -774,26 +794,48 @@ class map(object):
 
     # first, check to see if the click occered within the inventory
     if mx > self.inventory.x and mx < self.inventory.x+self.inventory.w and \
-    my > self.inventory.y and my < self.inventory.y+self.inventory.h:
+    my > self.inventory.y and my < self.inventory.y+self.inventory.h and event.button == 1:
       self.inventory.click(event)
       return
 
+    # scroll
+    if event.button == 5 and self.inventory.ACTIVE_CELL[0]+1 < self.inventory._INV_W:
+      self.inventory.ACTIVE_CELL = (self.inventory.ACTIVE_CELL[0]+1, self.inventory.ACTIVE_CELL[1])
+
+    if event.button == 4 and self.inventory.ACTIVE_CELL[0]-1 >= 0:
+      self.inventory.ACTIVE_CELL = (self.inventory.ACTIVE_CELL[0]-1, self.inventory.ACTIVE_CELL[1])
+
+
 
     # get 3d click
-    x, y = self.selected_tile#self.to_3d_tile(mx, my)
+    x, y = self.selected_tile  # self.to_3d_tile(mx, my)
 
     # round off
     if x < 0: x = 0
     if y < 0: y = 0
 
 
-    if a == "down" and event.button == 1:
 
-      # check entitys
+
+    if a == "down" and event.button == 1: # left click
+
+      # check entitys (click detection)
+      Tx, Ty = self.to_screen(x, y)
       for e in self._entitys:
-        Tx, Ty = self.to_2d_tile(mx, my)
-        if Tx >= e.x and Tx <= e.x+e.w and Ty >= e.y and Ty <= e.y+e.h:
+        ex, ey = self.to_screen(e.x, e.y)
+        if Tx >= ex and Tx <= ex+e.w and Ty >= ey and Ty <= ey+e.h:
           if e.click(): return
+
+
+
+      # check clicking of the border
+      # aw = self.w/2*self.TILE_W
+      # ah = self.h/2*self.TILE_H
+      # for y in xrange(0, self.h):
+      #   if mx > self.xo+aw-self.TILE_W-(y*self.TILE_W/2) and my > self.yo-ah-self.TILE_H/2+(y*self.TILE_H/2) \
+      #   and mx < self.xo+aw-self.TILE_W-(y*self.TILE_W/2)+self.src.llog.get_width() and my < self.yo-ah-self.TILE_H/2+(y*self.TILE_H/2)+self.src.llog.get_height() and \
+      #   self.tiles[x][y].tiles[-1] == []:
+      #     print 123
 
 
       # otherwise, mine that tile
@@ -801,21 +843,49 @@ class map(object):
       if not self.inventory.room_in_inventory(): return
       self.mine_tile(x, y)
 
-    elif a == "down" and event.button == 3:
+
+
+
+    elif a == "down" and event.button == 3: # right click
       
       # error checking
       if self.tiles[x][y].h > (self.BLOCK_H+self.BLOCK_H)/2: return
 
+      # get items for later
+      g = self.inventory.get_selected_item()
+      if not g: return
+      m = inventory.items_args[ inventory.get_name_from_id(g.id) ]
+      
 
-      # if we have the resources...
-      if type( self.inventory.item_in_inventory( inventory.item(inventory.items["sand"]) )) == int:
+      # PLACE BLOCK
+      # if we have the resources, and the tile can be placed, place it
+      if g and m.has_key("shape") and m["shape"] == "block":
         # update tile (increase height)
         self.tiles[x][y].h += 1
-        self.inventory.remove_item( inventory.item(inventory.items["sand"], 1) )
+        self.tiles[x][y].tiles.append(g.id)
+        self.inventory.remove_item( inventory.item(g.id, 1) )
+
+
+
+      # OTHER
+      # if not, but the tile is flat, do something else
+      elif g and m.has_key("shape") and m["shape"] == "flat":
+        
+        # spawn entity?
+        if m.has_key("place_entity") and issubclass(m["place_entity"], entitys.entity):
+          self.spawn(x, y, m["place_entity"])
+          if m.has_key("remove_on_place_entity") and m["remove_on_place_entity"]:
+            self.inventory.remove_item( inventory.item(g.id, 1) )
+
+
+
 
       # send an update to tiles block
       self.tiles[x][y].update()
       self.tiles[x][y].update_block()
+
+
+
 
     elif a == "up":
       # reset tool

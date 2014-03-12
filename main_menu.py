@@ -1,7 +1,7 @@
 import pygame
 from pygame.locals import *
 
-import os
+import os, sys
 import shutil
 
 
@@ -260,7 +260,7 @@ def load_new_world(s):
 
 
     # draw selectbox
-    worlds = os.listdir("saves")
+    worlds = [t for t in reversed( os.listdir("saves") )]
 
     pygame.draw.rect(s, (100, 100, 100), (0, 16, s.get_width(), H))
     pygame.draw.rect(s, (0, 0, 0), (-10, 16, s.get_width()+20, H), 3)

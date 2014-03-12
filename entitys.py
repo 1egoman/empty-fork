@@ -12,6 +12,11 @@ from math import *
 # random
 import random
 
+import inventory
+
+
+
+
 class entity(object):
 
 
@@ -80,6 +85,7 @@ class entity(object):
 
 
   def click(self):
+    # False will allow the click to not be 'used up' on the entity
     return False
 
   def delete(self):
@@ -95,14 +101,14 @@ class sandwich(entity):
     self.h = 256
 
     # get center of map
-    self.x = (self.parent.w/2)
-    self.y = (self.parent.h/2)
+    self.x = (self.parent.w/2)#(self.w/self.parent._TILE_W/2)
+    self.y = (self.parent.h/2)#(self.h/self.parent._TILE_H/2)
 
     # draw sandwich
     sx, sy = self.parent.to_screen(self.x, self.y)
 
     # render
-    self.s.blit( self.parent.src.sandwich, (sx-self.parent.src.sandwich.get_width()/2, sy-self.parent.src.sandwich.get_height()/2) )
+    self.s.blit( self.parent.src.sandwich, (sx, sy) )
 
 
   def click(self):
@@ -120,6 +126,43 @@ class sandwich(entity):
 
     # notify user
     self.parent.notify.msg("Sandwich", "You finished up your sandwich, and found \nsome ants underneath!")
+    return True
+
+
+
+
+# fire
+class fire(entity):
+  _FIRE_CHANCE = 200
+
+  def __init__(self, *args):
+    super(fire, self).__init__(*args)
+    self.CREATION_STAMP = self.parent.time
+    self.w = self.parent._TILE_W
+    self.h = self.parent._TILE_H*2
+
+  def update(self): pass
+
+  def render(self):
+
+    for e in self.parent._entitys:
+      if e.x > self.x and e.y < self.y and e.x < self.x+self.parent.TILE_W and e.y < self.y+self.parent.TILE_H:
+        e.delete()
+
+    # see if we turn it into bubble glass
+    if random.randrange(0, self._FIRE_CHANCE) == 0:
+      self.parent.tiles[self.x][self.y].tiles[-1] = inventory.items["bubbleglass"]
+
+    # draw fire
+    sx, sy = self.parent.to_screen(self.x, self.y)
+
+    # render
+    self.s.blit( self.parent.src.fire, (sx, sy-self.parent._TILE_H) )
+
+
+  def click(self):
+    # delete self
+    self.delete()
     return True
 
 

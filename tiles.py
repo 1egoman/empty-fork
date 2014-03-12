@@ -8,6 +8,10 @@ from math import *
 # random
 import random
 
+import inventory
+
+
+
 class tile(object):
 
   TILE_H = 32
@@ -38,6 +42,7 @@ class tile(object):
     self._flat = False
 
     self.selected = False
+    self.tiles = []
 
   # calculates the amout to shade a tile
   def calculate_shade(self, s):
@@ -53,6 +58,19 @@ class tile(object):
 
   def update(self):
     # update tile
+
+    # first, deal with the tiles list
+    if not hasattr(self, "tiles"):
+      self.tiles = []
+
+    elif len(self.tiles)-1 > self.h:
+      self.tiles = self.tiles[:-self.h]
+
+    elif len(self.tiles)-1 < self.h:
+      while len(self.tiles)-1 < self.h:
+        self.tiles.append( inventory.items["sand"] )     
+
+
 
     #               /\   <------ 1st
     #              /  \
@@ -176,7 +194,7 @@ class tile(object):
 
     # draw tile
     c = (self.color[0]*self._SHADE, self.color[1]*self._SHADE, self.color[2]*self._SHADE)
-    pygame.draw.polygon(self.s, c, self.pts)
+    if not self._flat: pygame.draw.polygon(self.s, c, self.pts)
     self.draw_on_block()
 
 
@@ -190,7 +208,6 @@ class tile(object):
       self.s.blit(self.parent.src.mine[self._mine_state], (self.pts[3][0], self.pts[0][1]))
 
     # draw selection
-    # if self.selected:
     if self.parent.selected_tile == (self.x, self.y):
       self.s.blit(self.parent.src.selector, (self.pts[3][0], self.pts[0][1]))
 
@@ -228,11 +245,21 @@ class sand(tile):
 
 
   def render(self, *args):
+    # change color of side walls
+    if len(self.tiles) and self.tiles[-1]: 
+      n = inventory.get_name_from_id( self.tiles[-1] )
+      self.color = inventory.items_args[n]["color"]
+
+    # acctully render
     super(sand, self).render(*args)
     
   def draw_on_block(self):
     if self._flat:
-      if self.h > self.parent.MAX_NEGITIVE_DIG: 
-        self.s.blit(self.parent.src.sand, (self.pts[3][0], self.pts[0][1]))
+
+      # rnder image on top of tile
+      if self.h > self.parent.MAX_NEGITIVE_DIG and len(self.tiles) and self.tiles[-1] in inventory.items.values(): 
+        n = inventory.get_name_from_id( self.tiles[-1] )
+        self.s.blit(inventory.items_img[n], (self.pts[3][0], self.pts[0][1]))
+
       else:
         self.s.blit(self.parent.src.dirt, (self.pts[3][0], self.pts[0][1]))
