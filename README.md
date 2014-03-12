@@ -3,6 +3,10 @@
 
 ![Title Image](title_image.png?raw=true)
 
+**Dependencies**
+- Pygame - http://pygame.org
+- GameObjects - https://code.google.com/p/gameobjects/
+
 **Licence**
   - License does not expire
   - Can be used on unlimited sites, servers
