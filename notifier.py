@@ -7,8 +7,8 @@ class notifier(object):
     self.lst = []
     self.s = s
     self.parent = p
-    self._FONT_HEAD = pygame.font.SysFont(pygame.font.get_default_font(), 24)
-    self._FONT = pygame.font.SysFont(pygame.font.get_default_font(), 18)
+    self._FONT_HEAD = pygame.font.Font(pygame.font.get_default_font(), 24)
+    self._FONT = pygame.font.Font(pygame.font.get_default_font(), 18)
     self._MARGINS = 20
     self._DISP_TIME = 3
 
