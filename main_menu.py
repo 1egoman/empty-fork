@@ -123,7 +123,7 @@ def load_new_world(s):
 
   slider = pygame.image.load( os.path.join("src", "menu", "slider.png") ).convert_alpha()
 
-  font = pygame.font.SysFont(pygame.font.get_default_font(), 32)
+  font = pygame.font.Font(pygame.font.get_default_font(), 32)
   iH = 96 # each list item's height
   selected = None
   sP = 0.0
@@ -345,7 +345,7 @@ def new_world(s):
   go_button_down = pygame.image.load( os.path.join("src", "menu", "gobuttondown.png") ).convert_alpha()
   go_down = False
 
-  font = pygame.font.SysFont(pygame.font.get_default_font(), 48)
+  font = pygame.font.Font(pygame.font.get_default_font(), 48)
   name = ""
 
   while 1:
