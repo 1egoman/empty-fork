@@ -71,7 +71,7 @@ class inv(object):
 
     self.ACTIVE_CELL = (0, 0)
 
-    self._FONT = pygame.font.SysFont(pygame.font.get_default_font(), 18)
+    self._FONT = pygame.font.Font(pygame.font.get_default_font(), 18)
 
 
   # get currently selected inventory item
