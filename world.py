@@ -71,7 +71,7 @@ class map(object):
     self._day_phases = 100.0 # how many times to change the light
 
     # font
-    self._FONT = pygame.font.SysFont(pygame.font.get_default_font(), 18)
+    self._FONT = pygame.font.Font(pygame.font.get_default_font(), 18)
 
     # world's name
     self._NAME = None
